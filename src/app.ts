@@ -4,7 +4,6 @@ import { AppError } from "./utils/AppError";
 import { globalErrorHandler } from "./controllers";
 import userRoutes from "./routes/userRoutes";
 
-
 const app = express();
 
 const corsOptions = {

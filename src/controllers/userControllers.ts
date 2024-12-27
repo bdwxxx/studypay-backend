@@ -1,9 +1,12 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response, NextFunction, response } from "express";
 import User from "../models/user.model";
 import jwt from "jsonwebtoken";
+import Order from "../models/order.model";
 import bcrpyt from "bcrypt";
 import dotenv from "dotenv";
+import mongoose from "mongoose";
 import { AppError } from "../utils/AppError";
+
 
 dotenv.config();
 
@@ -62,3 +65,33 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         next(err);
     }
 };
+
+export const createOrder = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { user, telegram, detailedDescription, price } = req.body;
+
+        let userId;
+        if(mongoose.Types.ObjectId.isValid(user)) {
+            userId = user;
+        } else {
+            const foundUser = await User.findOne({ user });
+            if (!foundUser) {
+                return next(new AppError('Пользователь не найден', 404));
+            }
+            userId = foundUser._id;
+        }
+
+        const order = new Order({
+            user: userId,
+            telegram,
+            detailedDescription,
+            price
+        });
+
+        const savedOrder = await order.save();
+
+        res.status(200).json({savedOrder});
+        } catch (err) {
+            next(err);
+        }
+    };
