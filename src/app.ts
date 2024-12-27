@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { AppError } from "./utils/AppError";
 import { globalErrorHandler } from "./controllers";
+import userRoutes from "./routes/userRoutes";
 
 
 const app = express();
@@ -18,15 +19,13 @@ const corsOptions = {
 app.use(express.json());
 app.use(cors(corsOptions));
 
+app.use("/api", userRoutes);
+
 app.all("*", (req, _res, next) => {
-  const errorMessage = `Ooops... Can't find ${req.originalUrl} on this server❗`;
+  const errorMessage = `Ooops... Can't find ${req.originalUrl} on this server`;
   const errorStatusCode = 404;
 
   next(new AppError(errorMessage, errorStatusCode));
-});
-
-app.get("/", (_req, res) => {
-    res.send("Hello from express");
 });
 
 app.use(globalErrorHandler);
