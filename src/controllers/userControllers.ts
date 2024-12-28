@@ -7,7 +7,6 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import { AppError } from "../utils/AppError";
 
-
 dotenv.config();
 
 export const register = async (req: Request, res: Response, next: NextFunction) => {
@@ -95,3 +94,105 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
             next(err);
         }
     };
+
+export const getPersonalOrder = async (req: Request, res: Response, next: NextFunction) => {
+  const token = (req.headers.authorization || "").replace(/Bearer\s?/, "");
+
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
+        _id: string;
+      };
+
+      const user = await User.findById(decoded._id);
+
+      if (!user) {
+        return next(new AppError("Пользователь не найден", 404));
+      }
+
+      const orders = await Order.find({ user: user._id })
+        .populate("user", "username")
+        .lean();
+
+      const ordersWithUsername = await Promise.all(
+        orders.map(async (order) => {
+          // Находим данные админа по ObjectId из заказа
+          const adminData = await User.findById(order.admin).lean();
+
+          return {
+            ...order,
+            user: (order.user as any).username, // Заменяем ObjectId пользователя на никнейм
+            admin: adminData ? adminData.user : order.admin, // Заменяем ObjectId админа на никнейм или оставляем ObjectId, если данные админа не найдены
+          };
+        })
+      );
+
+      res.status(200).json({
+        status: "success",
+        data: {
+          orders: ordersWithUsername,
+        },
+      });
+    } catch (err) {
+      next(err);
+    }
+  } else {
+    next(new AppError("No token provided", 401));
+  }
+};
+
+export const orderNotification = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return next(new AppError("Order not found", 404));
+    }
+  
+    const user = await User.findById(order.user);
+    
+    if (!user) {
+      return next(new AppError("User not found", 404));
+    }
+
+    const orderWithUser = {
+        ...order.toObject(),
+        user: user.user
+    };
+
+    res.status(200).json(orderWithUser);
+} catch (err) {
+    next(err);
+  }
+};
+
+export const cancelOrder = async (req: Request, res: Response, next: NextFunction) => {
+    const token = (req.headers.authorization || "").replace(/Bearer\s?/, '');
+    try {
+        const order = await Order.findById(req.params.orderId);
+
+        if (!order) {
+            return next(new AppError('Заказ не найден', 404));
+        }
+
+        const decoded = jwt.verify(token, 'process.env.JWT') as { _id: string };
+
+        if (order.user.toString() !== decoded._id) {
+            return next(new AppError('Вы не можете отменить чужой заказ', 403));
+        }
+
+        order.status = 'Отменено';
+        await order.save();
+
+        res.status(200).json({ message: 'Заказ успешно отменен' });
+
+    } catch (err) {
+        next(err);
+    };
+};
+
+export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
+
+};

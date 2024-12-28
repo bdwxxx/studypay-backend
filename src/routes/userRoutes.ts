@@ -1,5 +1,5 @@
 import express from "express";
-import { userController, helpersController } from "../controllers/index";
+import { userController, helpersController } from "../controllers";
 import { authMiddleware } from "../middleware/auth.middleware";
 import { registerPipeline, loginPipeline, createOrderPipeline } from "../utils/combinedValidations";
 
@@ -11,6 +11,9 @@ router.post("/login/login", loginPipeline, userController.login);
 
 //?--------------------ORDERS---------------------?\\
 router.post("/orders/create", authMiddleware, createOrderPipeline, userController.createOrder); 
+router.get("/orders/get", authMiddleware, userController.getPersonalOrder);
+router.get("/order/:orderId", authMiddleware, userController.orderNotification);
+router.post("/order/cancel/:orderId", authMiddleware, userController.cancelOrder);
 
 //?----------------HELPER REQUESTS----------------?\\
 router.get("/get/user", authMiddleware, helpersController.getUser);
