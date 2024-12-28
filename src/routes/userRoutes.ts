@@ -14,6 +14,7 @@ router.post("/orders/create", authMiddleware, createOrderPipeline, userControlle
 router.get("/orders/get", authMiddleware, userController.getPersonalOrder);
 router.get("/order/:orderId", authMiddleware, userController.orderNotification);
 router.post("/order/cancel/:orderId", authMiddleware, userController.cancelOrder);
+router.put("/order/update/:orderId", authMiddleware, userController.updateOrder);
 
 //?----------------HELPER REQUESTS----------------?\\
 router.get("/get/user", authMiddleware, helpersController.getUser);

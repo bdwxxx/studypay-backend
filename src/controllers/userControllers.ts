@@ -100,7 +100,7 @@ export const getPersonalOrder = async (req: Request, res: Response, next: NextFu
 
   if (token) {
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
+      const decoded = jwt.verify(token, "process.env.JWT" as string) as {
         _id: string;
       };
 
@@ -127,12 +127,7 @@ export const getPersonalOrder = async (req: Request, res: Response, next: NextFu
         })
       );
 
-      res.status(200).json({
-        status: "success",
-        data: {
-          orders: ordersWithUsername,
-        },
-      });
+      res.status(200).json( ordersWithUsername );
     } catch (err) {
       next(err);
     }
@@ -193,6 +188,46 @@ export const cancelOrder = async (req: Request, res: Response, next: NextFunctio
     };
 };
 
-export const changePassword = async (req: Request, res: Response, next: NextFunction) => {
+export const updateOrder = async (req: Request, res: Response, next: NextFunction) => {
+  const { orderId } = req.params;
+  const { ...updateOrder } = req.body;
 
+  try {
+    // Проверка валидности идентификатора заказа
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return next(new AppError("Неверный идентификатор заказа", 400));
+    }
+
+    // Проверка наличия updateOrder в теле запроса
+    if (!updateOrder || !updateOrder.telegram) {
+      return next(
+        new AppError("Необходимо указать данные для обновления заказа", 400)
+      );
+    }
+
+    // Поиск пользователя по telegram
+    const existingUser = await User.findOne({ telegram: updateOrder.telegram });
+    if (!existingUser) {
+      return next(new AppError("Пользователь не найден", 404));
+    }
+
+    const userId = existingUser._id;
+
+    delete updateOrder._id;
+
+    // Обновление заказа
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      { user: userId, ...updateOrder },
+      { new: true }
+    );
+
+    if (!updatedOrder) {
+      return next(new AppError("Заказ не найден", 404));
+    }
+
+    res.status(200).json({ updatedOrder });
+  } catch (err) {
+    next(err);
+  }
 };
