@@ -71,7 +71,6 @@ export const globalErrorHandler = (
   error: ErrorWithDetails,
   _req: Request,
   res: Response,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _next: NextFunction
 ): void => {
   error.statusCode = error.statusCode || 500;

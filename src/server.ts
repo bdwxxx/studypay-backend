@@ -2,6 +2,7 @@ import * as dotenv from "dotenv";
 import mongoose from "mongoose";
 import TelegramBot from "node-telegram-bot-api";
 import { app } from "./app";
+import { setupBotHandlers } from "./telegramBot";
 
 dotenv.config();
 
@@ -53,6 +54,9 @@ const initializeTelegramBot = () => {
   bot.getMe().then((botInfo) => {
     console.log(`Telegram bot @${botInfo.username} started ✔ `);
   });
+
+  // Устанавливаем обработчики
+  setupBotHandlers(bot);
 
   return bot;
 };
