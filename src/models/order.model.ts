@@ -6,7 +6,7 @@ interface IOrder extends Document {
   detailedDescription: string;
   price: number;
   status: string;
-  admin?: mongoose.Schema.Types.ObjectId;
+  admin?: mongoose.Types.ObjectId;
   close: boolean;
   createdAt?: Date;
   updatedAt?: Date;

@@ -9,34 +9,55 @@ import { AppError } from "../utils/AppError";
 
 dotenv.config();
 
-export const register = async (req: Request, res: Response, next: NextFunction) => {
+export const register = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const password = req.body.password
+    const { user, telegram, password } = req.body;
+
+    // Проверка на уникальность имени пользователя и Telegram
+    const existingUser = await User.findOne({ $or: [{ user }, { telegram }] });
+    if (existingUser) {
+      return next(
+        new AppError(
+          "Пользователь с таким именем или Telegram уже существует",
+          400
+        )
+      );
+    }
+
     const salt = await bcrpyt.genSalt(10);
     const hashedPassword = await bcrpyt.hash(password, salt);
 
     const doc = new User({
-        user: req.body.user,
-        telegram: req.body.telegram,
-        passwordHash: hashedPassword
+      user,
+      telegram,
+      passwordHash: hashedPassword,
     });
 
-    const user = await doc.save();
+    const newUser = await doc.save();
 
-    const token = jwt.sign({ id: user._id }, 'process.env.JWT', {expiresIn: '30d'});
+    const token = jwt.sign(
+      { id: newUser._id },
+      "process.env.JWT" as string,
+      { expiresIn: "30d" }
+    );
 
-    const { passwordHash, ...userData } = user.toObject();
+    const { passwordHash, ...userData } = newUser.toObject();
 
-    res.status(201).json({
-        status: 'success',
-        data: {
-            user: userData,
-            token
-        }
+    res.status(200).json({
+      status: "success",
+      data: {
+        user: userData,
+        token,
+      },
     });
   } catch (err) {
     next(err);
-}};
+  }
+};
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -56,6 +77,8 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
 
         const { passwordHash, ...userData } = user.toObject();
 
+        console.log(`Authorization: ${user}`, token);
+
         res.json({
             status: 'success',
             data: {...userData, token}});
@@ -65,35 +88,58 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     }
 };
 
-export const createOrder = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const { user, telegram, detailedDescription, price } = req.body;
+export const createOrder = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user, telegram, detailedDescription, price } = req.body;
 
-        let userId;
-        if(mongoose.Types.ObjectId.isValid(user)) {
-            userId = user;
-        } else {
-            const foundUser = await User.findOne({ user });
-            if (!foundUser) {
-                return next(new AppError('Пользователь не найден', 404));
-            }
-            userId = foundUser._id;
-        }
+    // Проверка наличия необходимых полей
+    if (!user || !telegram || !detailedDescription || !price) {
+      return next(new AppError("Все поля обязательны для заполнения", 400));
+    }
 
-        const order = new Order({
-            user: userId,
-            telegram,
-            detailedDescription,
-            price
-        });
+    // Проверка валидности идентификатора пользователя
+    let userId;
+    if (mongoose.Types.ObjectId.isValid(user)) {
+      userId = user;
+    } else {
+      const foundUser = await User.findOne({ user });
+      if (!foundUser) {
+        return next(new AppError("Пользователь не найден", 404));
+      }
+      userId = foundUser._id;
+    }
 
-        const savedOrder = await order.save();
+    // Проверка верификации пользователя
+    const verifiedUser = await User.findById(userId);
+    if (!verifiedUser || !verifiedUser.isVerified) {
+      return next(new AppError("Пользователь не верифицирован", 403));
+    }
 
-        res.status(200).json({savedOrder});
-        } catch (err) {
-            next(err);
-        }
-    };
+    // Создание нового заказа
+    const order = new Order({
+      user: userId,
+      telegram,
+      detailedDescription,
+      price,
+    });
+
+    // Сохранение заказа
+    const savedOrder = await order.save();
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        order: savedOrder,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 export const getPersonalOrder = async (req: Request, res: Response, next: NextFunction) => {
   const token = (req.headers.authorization || "").replace(/Bearer\s?/, "");

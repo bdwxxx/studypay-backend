@@ -6,7 +6,6 @@ export const setupBotHandlers = (bot: TelegramBot) => {
   bot.onText(/\/start/, (msg: any) => {
     const text = "*Привет\\!* Я бот _StudyPay_, чем могу быть полезен?";
     bot.sendMessage(msg.chat.id, text, { parse_mode: "MarkdownV2" });
-    console.log("Bot received a message:", msg.text, "from", msg.chat.id, msg.from.username);
   });
 
   bot.onText(/\/resetpassword/, async (msg: any) => {
@@ -28,23 +27,12 @@ export const setupBotHandlers = (bot: TelegramBot) => {
 
       const resetToken = jwt.sign(
         { id: user._id },
-        "process.env.JWT" as string,
+        'process.env.JWT' as string,
         { expiresIn: "10m" }
       );
 
       const resetLink = `http://localhost:3000/resetpassword/${resetToken}`;
-
-      if (!resetLink) {
-        const text =
-          "Не удалось создать ссылку для сброса пароля\\. Попробуйте позже\\.";
-        return bot.sendMessage(chatId, text, { parse_mode: "MarkdownV2" });
-      }
-
-      const escapedLink = resetLink.replace(/([_*[\]()~`>#+-=|{}.!])/g, "\\$1"); 
-
-    //! const text = `Для сброса пароля перейдите по ссылке: [ссылка](${escapedLink})\nСсылка действительна *10 минут*`; !\\ НЕ ЗАБЫТЬ СНЯТЬ КОММЕНТАРИЙ
-
-    const text = `Для сброса пароля перейдите по ссылке: ${escapedLink}\nСсылка действительна *10 минут*`;
+      const text = `Для сброса пароля перейдите по ссылке: [ссылка](${resetLink})\nСсылка действительна *10 минут*`;
 
       bot.sendMessage(chatId, text, { parse_mode: "MarkdownV2" });
     } catch (err) {

@@ -17,7 +17,7 @@ export const adminMiddleware = (
 
   if (token) {
     try {
-      const decoded = jwt.verify(token, process.env.JWT as string) as {
+      const decoded = jwt.verify(token, 'process.env.JWT' as string) as {
         _id: string;
         role: string;
       };

@@ -4,5 +4,6 @@ declare namespace NodeJS {
     JWT: string;
     TELEGRAM_TOKEN: string;
     PORT: string;
+    APIAIKEY: string;
   }
 }

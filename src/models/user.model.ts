@@ -6,6 +6,7 @@ interface IUser extends Document {
   passwordHash: string;
   role: "user" | "admin" | "owner";
   isVerified: boolean;
+  aiAccessUntil?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -34,6 +35,11 @@ const UserSchema: Schema<IUser> = new Schema(
     isVerified: {
       type: Boolean,
       default: false,
+    },
+    aiAccessUntil: {
+      type: Date,
+      required: false,
+      default: null,
     },
   },
   { timestamps: true }

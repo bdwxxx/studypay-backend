@@ -22,12 +22,12 @@ export const authMiddleware = (req: AuthenticatedRequest, res: Response, next: N
             next();
         } catch (e) {
             res.status(403).json({
-                message: "FORBIEEDEN",
+                message: "Авторизуйтесь",
             });
         }
     } else {
         res.status(403).json({
-            message: "FORBIEEDEN",
+            message: "Авторизуйтесь",
         });
     }
 };
