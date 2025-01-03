@@ -9,6 +9,11 @@ import { AppError } from "../utils/AppError";
 
 dotenv.config();
 
+/**
+ * Получение данных пользователя
+ * @method GET
+ * @param {string} authorization - Bearer токен в заголовке
+ */
 export const getUser = async (
   req: Request,
   res: Response,
@@ -65,6 +70,11 @@ export const getUser = async (
   }
 };
 
+/**
+ * Получение телеграма пользователя
+ * @method GET
+ * @param {string} authorization - Bearer токен в заголовке
+ */
 export const getTelegram = async (req: Request, res: Response, next: NextFunction) => {
  try {
    const authHeader = req.headers.authorization;
@@ -95,6 +105,11 @@ export const getTelegram = async (req: Request, res: Response, next: NextFunctio
  }
 };
 
+/**
+ * Проверка верификации пользователя
+ * @method GET
+ * @param {string} authorization - Bearer токен в заголовке
+ */
 export const verified = async (req: Request, res: Response, next: NextFunction) => {
     try {
     const authHeader = req.headers.authorization;

@@ -9,6 +9,13 @@ import { AppError } from "../utils/AppError";
 
 dotenv.config();
 
+/**
+ * Регистрация нового пользователя
+ * @method POST
+ * @param {string} user - Имя пользователя
+ * @param {string} telegram - Телеграм
+ * @param {string} password - Пароль
+ */
 export const register = async (
   req: Request,
   res: Response,
@@ -59,6 +66,12 @@ export const register = async (
   }
 };
 
+/**
+ * Авторизация пользователя
+ * @method POST
+ * @param {string} telegram - Телеграм
+ * @param {string} password - Пароль
+ */
 export const login = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const user = await User.findOne({ telegram: req.body.telegram });
@@ -88,6 +101,14 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     }
 };
 
+/**
+ * Создание нового заказа
+ * @method POST
+ * @param {string} user - ID или имя пользователя
+ * @param {string} telegram - Телеграм
+ * @param {string} detailedDescription - Описание заказа
+ * @param {number} price - Цена
+ */
 export const createOrder = async (
   req: Request,
   res: Response,
@@ -141,6 +162,11 @@ export const createOrder = async (
   }
 };
 
+/**
+ * Получение личных заказов пользователя
+ * @method GET
+ * @param {string} authorization - Bearer токен в заголовке
+ */
 export const getPersonalOrder = async (req: Request, res: Response, next: NextFunction) => {
   const token = (req.headers.authorization || "").replace(/Bearer\s?/, "");
 
@@ -182,6 +208,11 @@ export const getPersonalOrder = async (req: Request, res: Response, next: NextFu
   }
 };
 
+/**
+ * Получение уведомления о заказе
+ * @method GET
+ * @param {string} orderId - ID заказа
+ */
 export const orderNotification = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { orderId } = req.params;
@@ -209,6 +240,12 @@ export const orderNotification = async (req: Request, res: Response, next: NextF
   }
 };
 
+/**
+ * Отмена заказа
+ * @method POST
+ * @param {string} orderId - ID заказа
+ * @param {string} authorization - Bearer токен
+ */
 export const cancelOrder = async (req: Request, res: Response, next: NextFunction) => {
     const token = (req.headers.authorization || "").replace(/Bearer\s?/, '');
     try {
@@ -234,6 +271,13 @@ export const cancelOrder = async (req: Request, res: Response, next: NextFunctio
     };
 };
 
+/**
+ * Обновление данных заказа
+ * @method PUT
+ * @param {string} orderId - ID заказа
+ * @param {object} body - Обновленные данные заказа
+ * @param {string} body.telegram - Телеграм пользователя
+ */
 export const updateOrder = async (req: Request, res: Response, next: NextFunction) => {
   const { orderId } = req.params;
   const { ...updateOrder } = req.body;

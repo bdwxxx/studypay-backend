@@ -9,6 +9,12 @@ import { AppError } from "../utils/AppError";
 
 dotenv.config();
 
+/**
+ * Авторизация админа
+ * @method POST
+ * @param {string} telegram - Телеграм
+ * @param {string} password - Пароль
+ */
 export const login = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const user = await User.findOne({ telegram: req.body.telegram });
@@ -37,6 +43,11 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     };
 };
 
+/**
+ * Проверка роли пользователя
+ * @method POST
+ * @param {string} token - JWT токен
+ */
 export const checkRole = async (req: Request, res: Response, next: NextFunction) => {
         const { token } = req.body;
 
@@ -60,6 +71,10 @@ export const checkRole = async (req: Request, res: Response, next: NextFunction)
             }
 };
 
+/**
+ * Показать все оплаченные заказы
+ * @method GET
+ */
 export const showAllOrders = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const orders = await Order.find({ status: "Оплачен" }).populate({ path: "user", model: "User", select: "user" }).exec();
@@ -79,6 +94,12 @@ export const showAllOrders = async (req: Request, res: Response, next: NextFunct
     }
 };
 
+/**
+ * Взять заказ в работу
+ * @method POST
+ * @param {string} orderId - ID заказа
+ * @param {string} authorization - Bearer токен
+ */
 export const takeOrder = async (
   req: Request,
   res: Response,
@@ -122,6 +143,11 @@ export const takeOrder = async (
   }
 };
 
+/**
+ * Получить заказы в работе у админа
+ * @method GET
+ * @param {string} authorization - Bearer токен
+ */
 export const workOrder = async (req: Request, res: Response, next: NextFunction) => {
   const token = (req.headers.authorization as string).replace(/Bearer\s?/, "");
 
@@ -165,6 +191,11 @@ export const workOrder = async (req: Request, res: Response, next: NextFunction)
   };
 };
 
+/**
+ * Получить детальную информацию о заказе
+ * @method GET
+ * @param {string} orderId - ID заказа
+ */
 export const orderDetailed = async (req: Request, res: Response, next: NextFunction) => {
   
   const { orderId } = req.params;
@@ -199,6 +230,12 @@ export const orderDetailed = async (req: Request, res: Response, next: NextFunct
   }
 };
 
+/**
+ * Изменить статус заказа
+ * @method PATCH
+ * @param {string} orderId - ID заказа
+ * @param {string} newStatus - Новый статус
+ */
 export const changeOrderStatus = async (req: Request, res: Response, next: NextFunction) => {
   const { orderId, newStatus } = req.body;
 
