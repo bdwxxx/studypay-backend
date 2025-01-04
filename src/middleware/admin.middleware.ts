@@ -1,7 +1,7 @@
-import jwt from "jsonwebtoken";
-import { Request, Response, NextFunction } from "express";
+import jwt from 'jsonwebtoken';
+import { Request, Response, NextFunction } from 'express';
 
-import dotenv from "dotenv";
+import dotenv from 'dotenv';
 dotenv.config();
 
 interface AuthenticatedRequest extends Request {
@@ -13,7 +13,7 @@ export const adminMiddleware = (
   res: Response,
   next: NextFunction
 ): void => {
-  const token = (req.headers.authorization || "").replace(/Bearer\s?/, "");
+  const token = (req.headers.authorization || '').replace(/Bearer\s?/, '');
 
   if (token) {
     try {
@@ -21,19 +21,19 @@ export const adminMiddleware = (
         _id: string;
         role: string;
       };
-      console.log("Decoded token:", decoded);
+      console.log('Decoded token:', decoded);
       req.userId = decoded._id;
 
-      if (decoded.role !== "admin" && decoded.role !== "owner") {
-        res.status(403).json({ message: "FORBIEEDEN: ONLY FOR ADMINS" });
+      if (decoded.role !== 'admin' && decoded.role !== 'owner') {
+        res.status(403).json({ message: 'FORBIEEDEN: ONLY FOR ADMINS' });
       } else {
         next();
       }
     } catch (e) {
-      console.error("Error verifying token:", e);
-      res.status(403).json({ message: "FORBIEEDEN: ONLY FOR ADMINS" });
+      console.error('Error verifying token:', e);
+      res.status(403).json({ message: 'FORBIEEDEN: ONLY FOR ADMINS' });
     }
   } else {
-    res.status(403).json({ message: "FORBIEEDEN: ONLY FOR ADMINS" });
+    res.status(403).json({ message: 'FORBIEEDEN: ONLY FOR ADMINS' });
   }
 };

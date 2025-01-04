@@ -1,5 +1,5 @@
-import { NextFunction, Response, Request } from "express";
-import { AppError } from "../utils/AppError";
+import { NextFunction, Response, Request } from 'express';
+import { AppError } from '../utils/AppError';
 
 interface ErrorWithDetails extends Error {
   statusCode?: number;
@@ -20,7 +20,7 @@ const handleDublicateError = (error: ErrorWithDetails): AppError => {
   const matchResult = String(error.errmsg).match(/(["'])(\\?.)*?\1/);
 
   if (!matchResult) {
-    throw new Error("Invalid errmsg format");
+    throw new Error('Invalid errmsg format');
   }
 
   const value = matchResult[0];
@@ -30,16 +30,16 @@ const handleDublicateError = (error: ErrorWithDetails): AppError => {
 
 const handleValidationError = (error: ErrorWithDetails): AppError => {
   const errors = Object.values(error.errors!).map((err) => err.message);
-  const message = `Invalid input data: ${errors.join(". ")}`;
+  const message = `Invalid input data: ${errors.join('. ')}`;
   return new AppError(message, 400);
 };
 
 const handleJWTError = (): AppError => {
-  return new AppError("Invalid token. Please log in again!", 401);
+  return new AppError('Invalid token. Please log in again!', 401);
 };
 
 const handleTokenExpiredError = (): AppError => {
-  return new AppError("Token has expired. Please log in again!", 401);
+  return new AppError('Token has expired. Please log in again!', 401);
 };
 
 const sendErrorDev = (res: Response, error: AppError): void => {
@@ -58,11 +58,11 @@ const sendErrorProd = (res: Response, error: AppError): void => {
       message: error.message,
     });
   } else {
-    console.log("ERROR!!!", error);
+    console.log('ERROR!!!', error);
 
     res.status(500).json({
-      status: "error",
-      message: "Something went very wrong...",
+      status: 'error',
+      message: 'Something went very wrong...',
     });
   }
 };
@@ -74,31 +74,31 @@ export const globalErrorHandler = (
   _next: NextFunction
 ): void => {
   error.statusCode = error.statusCode || 500;
-  error.status = error.status || "error";
+  error.status = error.status || 'error';
 
-  if (process.env["NODE_ENV"] !== "production") {
+  if (process.env['NODE_ENV'] !== 'production') {
     sendErrorDev(res, error as AppError);
   } else {
     let errorInstance: ErrorWithDetails = {
       ...error,
       name: error.name,
       message: error.message,
-      errmsg: error.errmsg ?? "",
+      errmsg: error.errmsg ?? '',
     };
 
-    if (errorInstance.name === "CastError") {
+    if (errorInstance.name === 'CastError') {
       errorInstance = handleCastError(errorInstance);
     }
     if (errorInstance.code === 11000) {
       errorInstance = handleDublicateError(errorInstance);
     }
-    if (errorInstance.name === "ValidationError") {
+    if (errorInstance.name === 'ValidationError') {
       errorInstance = handleValidationError(errorInstance);
     }
-    if (errorInstance.name === "JsonWebTokenError") {
+    if (errorInstance.name === 'JsonWebTokenError') {
       errorInstance = handleJWTError();
     }
-    if (errorInstance.name === "TokenExpiredError") {
+    if (errorInstance.name === 'TokenExpiredError') {
       errorInstance = handleTokenExpiredError();
     }
 

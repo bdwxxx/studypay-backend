@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema } from 'mongoose';
 
 interface IOrder extends Document {
   user: mongoose.Schema.Types.ObjectId;
@@ -16,7 +16,7 @@ const OrderSchema: Schema = new Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: true,
     },
     telegram: {
@@ -34,21 +34,21 @@ const OrderSchema: Schema = new Schema(
     status: {
       type: String,
       enum: [
-        "Ожидает оплаты",
-        "Оплачен",
-        "В процессе выполнения",
-        "На проверки",
-        "Требует исправлений",
-        "Готов к передаче",
-        "Отменено",
-        "Возврат",
-        "Выполнен",
+        'Ожидает оплаты',
+        'Оплачен',
+        'В процессе выполнения',
+        'На проверки',
+        'Требует исправлений',
+        'Готов к передаче',
+        'Отменено',
+        'Возврат',
+        'Выполнен',
       ],
-      default: "Ожидает оплаты",
+      default: 'Ожидает оплаты',
     },
     admin: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+      ref: 'User',
       required: false,
     },
     close: {
@@ -59,4 +59,4 @@ const OrderSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-export default mongoose.model<IOrder>("Order", OrderSchema);
+export default mongoose.model<IOrder>('Order', OrderSchema);

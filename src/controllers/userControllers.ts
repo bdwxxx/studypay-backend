@@ -1,11 +1,11 @@
-import { Request, Response, NextFunction, response } from "express";
-import User from "../models/user.model";
-import jwt from "jsonwebtoken";
-import Order from "../models/order.model";
-import bcrpyt from "bcrypt";
-import dotenv from "dotenv";
-import mongoose from "mongoose";
-import { AppError } from "../utils/AppError";
+import { Request, Response, NextFunction, response } from 'express';
+import User from '../models/user.model';
+import jwt from 'jsonwebtoken';
+import Order from '../models/order.model';
+import bcrpyt from 'bcrypt';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import { AppError } from '../utils/AppError';
 
 dotenv.config();
 
@@ -16,23 +16,14 @@ dotenv.config();
  * @param {string} telegram - Телеграм
  * @param {string} password - Пароль
  */
-export const register = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const register = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { user, telegram, password } = req.body;
 
     // Проверка на уникальность имени пользователя и Telegram
     const existingUser = await User.findOne({ $or: [{ user }, { telegram }] });
     if (existingUser) {
-      return next(
-        new AppError(
-          "Пользователь с таким именем или Telegram уже существует",
-          400
-        )
-      );
+      return next(new AppError('Пользователь с таким именем или Telegram уже существует', 400));
     }
 
     const salt = await bcrpyt.genSalt(10);
@@ -46,16 +37,12 @@ export const register = async (
 
     const newUser = await doc.save();
 
-    const token = jwt.sign(
-      { id: newUser._id },
-      "process.env.JWT" as string,
-      { expiresIn: "30d" }
-    );
+    const token = jwt.sign({ id: newUser._id }, 'process.env.JWT' as string, { expiresIn: '30d' });
 
     const { passwordHash, ...userData } = newUser.toObject();
 
     res.status(200).json({
-      status: "success",
+      status: 'success',
       data: {
         user: userData,
         token,
@@ -73,32 +60,32 @@ export const register = async (
  * @param {string} password - Пароль
  */
 export const login = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const user = await User.findOne({ telegram: req.body.telegram });
+  try {
+    const user = await User.findOne({ telegram: req.body.telegram });
 
-        if(!user) {
-            return next(new AppError('Логин или пароль неверный', 400));
-        }
-
-        const isValidPassword = await bcrpyt.compare(req.body.password, user.passwordHash);
-
-        if(!isValidPassword) {
-            return next(new AppError("Логин или пароль неверный", 400));
-        }
-
-        const token = jwt.sign({ _id: user._id }, 'process.env.JWT', {expiresIn: '30d'});
-
-        const { passwordHash, ...userData } = user.toObject();
-
-        console.log(`Authorization: ${user}`, token);
-
-        res.json({
-            status: 'success',
-            data: {...userData, token}});
-
-    } catch (err) {
-        next(err);
+    if (!user) {
+      return next(new AppError('Логин или пароль неверный', 400));
     }
+
+    const isValidPassword = await bcrpyt.compare(req.body.password, user.passwordHash);
+
+    if (!isValidPassword) {
+      return next(new AppError('Логин или пароль неверный', 400));
+    }
+
+    const token = jwt.sign({ _id: user._id }, 'process.env.JWT', { expiresIn: '30d' });
+
+    const { passwordHash, ...userData } = user.toObject();
+
+    console.log(`Authorization: ${user}`, token);
+
+    res.json({
+      status: 'success',
+      data: { ...userData, token },
+    });
+  } catch (err) {
+    next(err);
+  }
 };
 
 /**
@@ -109,17 +96,13 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
  * @param {string} detailedDescription - Описание заказа
  * @param {number} price - Цена
  */
-export const createOrder = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const createOrder = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { user, telegram, detailedDescription, price } = req.body;
 
     // Проверка наличия необходимых полей
     if (!user || !telegram || !detailedDescription || !price) {
-      return next(new AppError("Все поля обязательны для заполнения", 400));
+      return next(new AppError('Все поля обязательны для заполнения', 400));
     }
 
     // Проверка валидности идентификатора пользователя
@@ -129,7 +112,7 @@ export const createOrder = async (
     } else {
       const foundUser = await User.findOne({ user });
       if (!foundUser) {
-        return next(new AppError("Пользователь не найден", 404));
+        return next(new AppError('Пользователь не найден', 404));
       }
       userId = foundUser._id;
     }
@@ -137,7 +120,7 @@ export const createOrder = async (
     // Проверка верификации пользователя
     const verifiedUser = await User.findById(userId);
     if (!verifiedUser || !verifiedUser.isVerified) {
-      return next(new AppError("Пользователь не верифицирован", 403));
+      return next(new AppError('Пользователь не верифицирован', 403));
     }
 
     // Создание нового заказа
@@ -152,7 +135,7 @@ export const createOrder = async (
     const savedOrder = await order.save();
 
     res.status(200).json({
-      status: "success",
+      status: 'success',
       data: {
         order: savedOrder,
       },
@@ -168,23 +151,21 @@ export const createOrder = async (
  * @param {string} authorization - Bearer токен в заголовке
  */
 export const getPersonalOrder = async (req: Request, res: Response, next: NextFunction) => {
-  const token = (req.headers.authorization || "").replace(/Bearer\s?/, "");
+  const token = (req.headers.authorization || '').replace(/Bearer\s?/, '');
 
   if (token) {
     try {
-      const decoded = jwt.verify(token, "process.env.JWT" as string) as {
+      const decoded = jwt.verify(token, 'process.env.JWT' as string) as {
         _id: string;
       };
 
       const user = await User.findById(decoded._id);
 
       if (!user) {
-        return next(new AppError("Пользователь не найден", 404));
+        return next(new AppError('Пользователь не найден', 404));
       }
 
-      const orders = await Order.find({ user: user._id })
-        .populate("user", "username")
-        .lean();
+      const orders = await Order.find({ user: user._id }).populate('user', 'username').lean();
 
       const ordersWithUsername = await Promise.all(
         orders.map(async (order) => {
@@ -199,12 +180,12 @@ export const getPersonalOrder = async (req: Request, res: Response, next: NextFu
         })
       );
 
-      res.status(200).json( ordersWithUsername );
+      res.status(200).json(ordersWithUsername);
     } catch (err) {
       next(err);
     }
   } else {
-    next(new AppError("No token provided", 401));
+    next(new AppError('No token provided', 401));
   }
 };
 
@@ -220,22 +201,22 @@ export const orderNotification = async (req: Request, res: Response, next: NextF
     const order = await Order.findById(orderId);
 
     if (!order) {
-      return next(new AppError("Order not found", 404));
+      return next(new AppError('Order not found', 404));
     }
-  
+
     const user = await User.findById(order.user);
-    
+
     if (!user) {
-      return next(new AppError("User not found", 404));
+      return next(new AppError('User not found', 404));
     }
 
     const orderWithUser = {
-        ...order.toObject(),
-        user: user.user
+      ...order.toObject(),
+      user: user.user,
     };
 
     res.status(200).json(orderWithUser);
-} catch (err) {
+  } catch (err) {
     next(err);
   }
 };
@@ -247,28 +228,27 @@ export const orderNotification = async (req: Request, res: Response, next: NextF
  * @param {string} authorization - Bearer токен
  */
 export const cancelOrder = async (req: Request, res: Response, next: NextFunction) => {
-    const token = (req.headers.authorization || "").replace(/Bearer\s?/, '');
-    try {
-        const order = await Order.findById(req.params.orderId);
+  const token = (req.headers.authorization || '').replace(/Bearer\s?/, '');
+  try {
+    const order = await Order.findById(req.params.orderId);
 
-        if (!order) {
-            return next(new AppError('Заказ не найден', 404));
-        }
+    if (!order) {
+      return next(new AppError('Заказ не найден', 404));
+    }
 
-        const decoded = jwt.verify(token, 'process.env.JWT') as { _id: string };
+    const decoded = jwt.verify(token, 'process.env.JWT') as { _id: string };
 
-        if (order.user.toString() !== decoded._id) {
-            return next(new AppError('Вы не можете отменить чужой заказ', 403));
-        }
+    if (order.user.toString() !== decoded._id) {
+      return next(new AppError('Вы не можете отменить чужой заказ', 403));
+    }
 
-        order.status = 'Отменено';
-        await order.save();
+    order.status = 'Отменено';
+    await order.save();
 
-        res.status(200).json({ message: 'Заказ успешно отменен' });
-
-    } catch (err) {
-        next(err);
-    };
+    res.status(200).json({ message: 'Заказ успешно отменен' });
+  } catch (err) {
+    next(err);
+  }
 };
 
 /**
@@ -285,20 +265,18 @@ export const updateOrder = async (req: Request, res: Response, next: NextFunctio
   try {
     // Проверка валидности идентификатора заказа
     if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return next(new AppError("Неверный идентификатор заказа", 400));
+      return next(new AppError('Неверный идентификатор заказа', 400));
     }
 
     // Проверка наличия updateOrder в теле запроса
     if (!updateOrder || !updateOrder.telegram) {
-      return next(
-        new AppError("Необходимо указать данные для обновления заказа", 400)
-      );
+      return next(new AppError('Необходимо указать данные для обновления заказа', 400));
     }
 
     // Поиск пользователя по telegram
     const existingUser = await User.findOne({ telegram: updateOrder.telegram });
     if (!existingUser) {
-      return next(new AppError("Пользователь не найден", 404));
+      return next(new AppError('Пользователь не найден', 404));
     }
 
     const userId = existingUser._id;
@@ -313,7 +291,7 @@ export const updateOrder = async (req: Request, res: Response, next: NextFunctio
     );
 
     if (!updatedOrder) {
-      return next(new AppError("Заказ не найден", 404));
+      return next(new AppError('Заказ не найден', 404));
     }
 
     res.status(200).json({ updatedOrder });

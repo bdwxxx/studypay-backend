@@ -1,10 +1,10 @@
-import mongoose, { Document, Schema, Model } from "mongoose";
+import mongoose, { Document, Schema, Model } from 'mongoose';
 
 interface IUser extends Document {
   user: string;
   telegram: string;
   passwordHash: string;
-  role: "user" | "admin" | "owner";
+  role: 'user' | 'admin' | 'owner';
   isVerified: boolean;
   aiAccessUntil?: Date;
   createdAt?: Date;
@@ -29,8 +29,8 @@ const UserSchema: Schema<IUser> = new Schema(
     },
     role: {
       type: String,
-      enum: ["user", "admin", "owner"],
-      default: "user",
+      enum: ['user', 'admin', 'owner'],
+      default: 'user',
     },
     isVerified: {
       type: Boolean,
@@ -45,6 +45,6 @@ const UserSchema: Schema<IUser> = new Schema(
   { timestamps: true }
 );
 
-const User: Model<IUser> = mongoose.model<IUser>("User", UserSchema);
+const User: Model<IUser> = mongoose.model<IUser>('User', UserSchema);
 
 export default User;

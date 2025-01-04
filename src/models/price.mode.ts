@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema } from 'mongoose';
 
 interface IPrice extends Document {
   service: string;
@@ -23,4 +23,4 @@ const PriceSchema: Schema = new Schema(
   { timestamps: true }
 );
 
-export default mongoose.model<IPrice>("Price", PriceSchema);
+export default mongoose.model<IPrice>('Price', PriceSchema);
