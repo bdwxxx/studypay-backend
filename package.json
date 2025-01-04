@@ -3,7 +3,7 @@
     "start": "cross-env NODE_ENV=production node dist/server.js",
     "build": "tsc",
     "dev": "nodemon --exec ts-node src/server.ts",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint --debug src/",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\""
   },
