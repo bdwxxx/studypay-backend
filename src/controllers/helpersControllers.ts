@@ -1,10 +1,7 @@
-import { Request, Response, NextFunction, response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import User from '../models/user.model';
 import jwt from 'jsonwebtoken';
-import Order from '../models/order.model';
-import bcrpyt from 'bcrypt';
 import dotenv from 'dotenv';
-import mongoose from 'mongoose';
 import { AppError } from '../utils/AppError';
 
 dotenv.config();
@@ -95,30 +92,24 @@ export const getTelegram = async (req: Request, res: Response, next: NextFunctio
  * @method GET
  * @param {string} authorization - Bearer токен в заголовке
  */
-export const verified = async (req: Request, res: Response, next: NextFunction) => {
+export const checkVerification = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers.authorization;
+    const token = req.headers.authorization?.replace(/Bearer\s?/, '');
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return next(new AppError('Токен не предоставлен или имеет неправильный формат', 401));
+    if (!token) {
+      return next(new AppError('Пожалуйста, авторизуйтесь', 401));
     }
 
-    const token = authHeader.replace('Bearer ', '');
+    const decoded = jwt.verify(token, 'process.env.JWT' as string) as { _id: string };
 
-    const decodedToken = jwt.verify(token, 'process.env.JWT' as string) as {
-      _id: string;
-    };
-
-    const user = await User.findById(decodedToken._id).select('isVerified');
+    const user = await User.findById(decoded._id, 'isVerified').exec();
 
     if (!user) {
       return next(new AppError('Пользователь не найден', 404));
     }
 
-    res.json({
-      isVerified: user.isVerified,
-    });
-  } catch (err) {
-    next(err);
+    res.json({ isVerified: user.isVerified });
+  } catch {
+    next();
   }
 };

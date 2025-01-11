@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction, response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import User from '../models/user.model';
 import jwt from 'jsonwebtoken';
 import Order from '../models/order.model';
@@ -80,8 +80,8 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     console.log(`Authorization: ${user}`, token);
 
     res.json({
-      status: 'success',
-      data: { ...userData, token },
+      ...userData,
+      token,
     });
   } catch (err) {
     next(err);

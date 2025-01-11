@@ -19,6 +19,6 @@ router.put('/order/update/:orderId', authMiddleware, userController.updateOrder)
 //?----------------HELPER REQUESTS----------------?\\
 router.get('/get/user', authMiddleware, helpersController.getUser);
 router.get('/get/user/telegram', authMiddleware, helpersController.getTelegram);
-router.get('/verified', authMiddleware, helpersController.verified);
+router.get('/verified', authMiddleware, helpersController.checkVerification);
 
 export default router;

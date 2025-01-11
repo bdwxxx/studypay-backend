@@ -33,7 +33,7 @@ export const setupBotHandlers = (bot: TelegramBot) => {
       const text = `Для сброса пароля перейдите по ссылке: [ссылка](${resetLink})\nСсылка действительна *10 минут*`;
 
       bot.sendMessage(chatId, text, { parse_mode: 'MarkdownV2' });
-    } catch (err) {
+    } catch {
       const text = 'Что\\-то пошло не так. Попробуйте позже.';
       bot.sendMessage(chatId, text, { parse_mode: 'MarkdownV2' });
     }

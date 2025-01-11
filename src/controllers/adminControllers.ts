@@ -1,10 +1,10 @@
-import { Request, Response, NextFunction, response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import User from '../models/user.model';
 import jwt from 'jsonwebtoken';
 import Order from '../models/order.model';
 import bcrpyt from 'bcrypt';
 import dotenv from 'dotenv';
-import mongoose, { ObjectId } from 'mongoose';
+import mongoose from 'mongoose';
 import { AppError } from '../utils/AppError';
 
 dotenv.config();
@@ -40,8 +40,8 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     const { passwordHash, ...userData } = user.toObject();
 
     res.json({ token, ...userData });
-  } catch (err) {
-    next(new AppError('Неизвестная ошибка...', 500));
+  } catch {
+    next();
   }
 };
 
@@ -51,7 +51,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
  * @param {string} token - JWT токен
  */
 export const checkRole = async (req: Request, res: Response, next: NextFunction) => {
-  const { token } = req.body;
+  const token = req.headers.authorization?.replace(/Bearer\s?/, '');
 
   if (!token) {
     return next(new AppError('Пожалуйста, авторизуйтесь', 401));
@@ -66,7 +66,7 @@ export const checkRole = async (req: Request, res: Response, next: NextFunction)
     }
 
     res.json(role);
-  } catch (err) {
+  } catch {
     next(new AppError('Внутрення ошибка сервера', 500));
   }
 };
