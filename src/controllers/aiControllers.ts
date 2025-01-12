@@ -110,7 +110,7 @@ export const requestAI = async (req: Request, res: Response, next: NextFunction)
       return next(new AppError('Prompt is required', 400));
     }
 
-    const models = ['gemini-1.5-pro', 'gemini-2.0-flash-thinking-exp-1219'];
+    const models = ['gemini-2.0-flash-exp', 'gemini-2.0-flash-thinking-exp-1219'];
 
     //! gemini-2.0-flash-exp
     //! gemini-2.0-flash-thinking-exp-1219

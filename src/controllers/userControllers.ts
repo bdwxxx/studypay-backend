@@ -6,6 +6,11 @@ import bcrpyt from 'bcrypt';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { AppError } from '../utils/AppError';
+import crypto from 'crypto';
+import ConfirmationCodeModel from '../models/confimation-code.model';
+import TelegramModel from '../models/telegram.model';
+import { bot } from '../server';
+import { Category } from '../models/category.model';
 
 dotenv.config();
 
@@ -48,6 +53,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         token,
       },
     });
+    res.status(200).json({ message: 'Код подтверждения отправлен' });
   } catch (err) {
     next(err);
   }
@@ -98,7 +104,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
  */
 export const createOrder = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { user, telegram, detailedDescription, price } = req.body;
+    const { user, telegram, detailedDescription, price, category, service } = req.body;
 
     // Проверка наличия необходимых полей
     if (!user || !telegram || !detailedDescription || !price) {
@@ -295,6 +301,153 @@ export const updateOrder = async (req: Request, res: Response, next: NextFunctio
     }
 
     res.status(200).json({ updatedOrder });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Проверка наличие пользователя в боте
+ * @method POST
+ * @param {string} headers.authorization - Bearer токен
+ */
+export const verifiedUserInBot = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const token = req.headers.authorization?.replace(/Bearer\s?/, '');
+
+    if (!token) {
+      return next(new AppError('Пожалуйста, авторизуйтесь', 401));
+    }
+
+    const decoded = jwt.verify(token, 'process.env.JWT' as string) as { _id: string };
+
+    const user = await User.findById(decoded._id, 'telegram').exec();
+
+    const telegramUser = await TelegramModel.findOne({ telegram: user?.telegram }).exec();
+
+    if (!telegramUser) {
+      return next(
+        new AppError('Пользователь не найден в Telegram-боте, проверьте правильность аккаунта', 404)
+      );
+    }
+
+    res.json({ telegram: telegramUser.telegram, chatId: telegramUser.chatId });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Проверка верификации пользователя
+ * @method POST
+ * @param {string} authorization - Bearer токен в заголовке
+ * @returns {string} code - Сообщение о верификации
+ */
+export const sendVerificationCode = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const token = req.headers.authorization?.replace(/Bearer\s?/, '');
+
+    if (!token) {
+      return next(new AppError('Пожалуйста, авторизуйтесь', 401));
+    }
+
+    const decoded = jwt.verify(token, 'process.env.JWT' as string) as { _id: string };
+
+    const user = await User.findById(decoded._id, 'isVerified').exec();
+
+    if (!user) {
+      return next(new AppError('Пользователь не найден', 404));
+    }
+
+    if (user.isVerified === true) {
+      return next(new AppError('Пользователь верифицирован', 403));
+    }
+
+    const generateCode = Array(6)
+      .fill(null)
+      .map(() => Math.random().toString(36).charAt(2))
+      .join('');
+    const confirmationCode = new ConfirmationCodeModel({
+      code: generateCode,
+      userId: decoded._id,
+    });
+
+    await confirmationCode.save();
+
+    const telegramInUser = await User.findById(decoded._id, 'telegram').exec();
+
+    const telegramUser = await TelegramModel.findOne({ telegram: telegramInUser?.telegram }).exec();
+
+    const chatId = telegramUser?.chatId as number;
+    try {
+      await bot.sendMessage(
+        chatId,
+        `*🔒 Код подтверждения*\n\n` +
+          `Ваш код подтверждения: \`${generateCode}\`\n\n` +
+          `Код действует *5 минут*\\.\n\n` +
+          `_Если вы не запрашивали этот код, просто проигнорируйте это сообщение\\._`,
+        {
+          parse_mode: 'MarkdownV2',
+        }
+      );
+
+      res.json({ message: 'Код подтверждения отправлен' });
+    } catch {
+      return next(new AppError('Ошибка при отправке сообщения в Telegram', 500));
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const checkVerificationCode = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const token = req.headers.authorization?.replace(/Bearer\s?/, '');
+    const { code } = req.body;
+
+    if (!token) {
+      return next(new AppError('Пожалуйста, авторизуйтесь', 401));
+    }
+
+    if (!code) {
+      return next(new AppError('Код не предоставлен', 400));
+    }
+
+    const decoded = jwt.verify(token, 'process.env.JWT' as string) as { _id: string };
+
+    const user = await User.findById(decoded._id).exec();
+
+    if (!user) {
+      return next(new AppError('Пользователь не найден', 404));
+    }
+
+    const confirmationCode = await ConfirmationCodeModel.findOne({ userId: decoded._id }).exec();
+
+    console.log(confirmationCode);
+
+    if (!confirmationCode) {
+      return next(new AppError('Код не найден', 404));
+    }
+
+    if (confirmationCode.code !== code) {
+      return next(new AppError('Код неверный', 400));
+    }
+
+    user.isVerified = true;
+
+    await user.save();
+    await ConfirmationCodeModel.deleteOne({ _id: confirmationCode._id }).exec();
+
+    res.json({ message: 'Пользователь успешно верифицирован' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const showCategory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const categories = await Category.find().exec();
+    res.status(200).json(categories);
   } catch (err) {
     next(err);
   }

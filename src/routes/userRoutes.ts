@@ -15,7 +15,12 @@ router.get('/orders/get', authMiddleware, userController.getPersonalOrder);
 router.get('/order/:orderId', authMiddleware, userController.orderNotification);
 router.post('/order/cancel/:orderId', authMiddleware, userController.cancelOrder);
 router.put('/order/update/:orderId', authMiddleware, userController.updateOrder);
+router.get('/category/get', authMiddleware, userController.showCategory);
 
+//?---------------------VERIFY---------------------?\\
+router.post('/verification/check-user-in-bot', authMiddleware, userController.verifiedUserInBot);
+router.post('/verification/send-code', authMiddleware, userController.sendVerificationCode);
+router.post('/verification/verify-code', authMiddleware, userController.checkVerificationCode);
 //?----------------HELPER REQUESTS----------------?\\
 router.get('/get/user', authMiddleware, helpersController.getUser);
 router.get('/get/user/telegram', authMiddleware, helpersController.getTelegram);

@@ -6,6 +6,7 @@ import bcrpyt from 'bcrypt';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { AppError } from '../utils/AppError';
+import { Category } from '../models/category.model';
 
 dotenv.config();
 
@@ -247,6 +248,34 @@ export const changeOrderStatus = async (req: Request, res: Response, next: NextF
     await order.save();
 
     res.status(200).json({ message: 'Статус заказа успешно изменен', order });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const addCategory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { category, description, services } = req.body;
+
+    // Проверка наличия необходимых данных
+    if (!category || !description || !services) {
+      return next(new AppError('Все поля (category, description, services) обязательны', 400));
+    }
+
+    // Создание новой категории
+    const newCategory = new Category({
+      category,
+      description,
+      services,
+    });
+
+    // Сохранение категории в базе данных
+    await newCategory.save();
+
+    res.status(201).json({
+      status: 'success',
+      data: newCategory,
+    });
   } catch (err) {
     next(err);
   }

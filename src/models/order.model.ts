@@ -8,6 +8,8 @@ interface IOrder extends Document {
   status: string;
   admin?: mongoose.Types.ObjectId;
   close: boolean;
+  category: mongoose.Schema.Types.ObjectId; // Связь с категорией
+  service: string; // Название услуги
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -33,27 +35,24 @@ const OrderSchema: Schema = new Schema(
     },
     status: {
       type: String,
-      enum: [
-        'Ожидает оплаты',
-        'Оплачен',
-        'В процессе выполнения',
-        'На проверки',
-        'Требует исправлений',
-        'Готов к передаче',
-        'Отменено',
-        'Возврат',
-        'Выполнен',
-      ],
-      default: 'Ожидает оплаты',
+      required: true,
     },
     admin: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: false,
     },
     close: {
       type: Boolean,
       default: false,
+    },
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category', // Указание ссылки на модель Category
+      required: true,
+    },
+    service: {
+      type: String, // Название услуги
+      required: true,
     },
   },
   { timestamps: true }
