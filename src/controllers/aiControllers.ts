@@ -112,6 +112,8 @@ export const requestAI = async (req: Request, res: Response, next: NextFunction)
 
     const models = ['gemini-2.0-flash-exp', 'gemini-2.0-flash-thinking-exp-1219'];
 
+    //! Список доступных моделей
+
     //! gemini-2.0-flash-exp
     //! gemini-2.0-flash-thinking-exp-1219
 
@@ -145,9 +147,18 @@ export const requestAI = async (req: Request, res: Response, next: NextFunction)
     }
 
     if (response) {
+      const { candidates } = response.data;
+      const simplifiedResponse = {
+        candidates: candidates.map((candidate: any) => ({
+          content: candidate.content.parts.map((part: any) => part.text).join(''),
+          role: candidate.content.role,
+          finishReason: candidate.finishReason,
+        })),
+      };
+
       res.status(200).json({
         status: 'success',
-        data: response.data,
+        data: simplifiedResponse,
       });
     } else {
       next(new AppError('No response received from AI models', 500));

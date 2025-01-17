@@ -62,11 +62,11 @@ export const checkRole = async (req: Request, res: Response, next: NextFunction)
     const decoded = jwt.verify(token, 'process.env.JWT' as string) as { role: string };
     const { role } = decoded;
 
-    if (role !== 'admin' && role !== 'owner') {
-      return next(new AppError('Доступ запрещен: Только для администраторов', 403));
+    if (role === 'admin' || role === 'owner') {
+      res.json({ role });
     }
 
-    res.json(role);
+    res.sendStatus(204); // TODO: check this
   } catch {
     next(new AppError('Внутрення ошибка сервера', 500));
   }

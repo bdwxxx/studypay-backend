@@ -14,7 +14,6 @@ router.get('/orders/showAllOrders', adminMiddleware, adminController.showAllOrde
 
 //?---------------------TEST----------------------?\\
 router.post('/wassup', aiController.buyAI);
-router.post('/test', aiController.requestAI);
 router.post('/category/add', adminController.addCategory);
 
 export default router;

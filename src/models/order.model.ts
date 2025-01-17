@@ -35,11 +35,24 @@ const OrderSchema: Schema = new Schema(
     },
     status: {
       type: String,
+      enum: [
+        'Ожидает оплаты',
+        'Оплачен',
+        'В процессе выполнения',
+        'На проверки',
+        'Требует исправлений',
+        'Готов к передаче',
+        'Отменено',
+        'Возврат',
+        'Выполнен',
+      ],
+      default: 'Ожидает оплаты',
       required: true,
     },
     admin: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      required: false,
     },
     close: {
       type: Boolean,

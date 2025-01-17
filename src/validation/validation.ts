@@ -32,11 +32,6 @@ export const loginValidation: ValidationChain[] = [
 ];
 
 export const createOrderValidation: ValidationChain[] = [
-  body('user')
-    .notEmpty()
-    .withMessage('Требуется пользователь')
-    .isLength({ min: 3 })
-    .withMessage('Имя пользователя должно быть не менее 3 символов'),
   body('telegram')
     .notEmpty()
     .withMessage('Требуется Telegram')

@@ -6,7 +6,6 @@ import bcrpyt from 'bcrypt';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { AppError } from '../utils/AppError';
-import crypto from 'crypto';
 import ConfirmationCodeModel from '../models/confimation-code.model';
 import TelegramModel from '../models/telegram.model';
 import { bot } from '../server';
@@ -79,11 +78,18 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       return next(new AppError('Логин или пароль неверный', 400));
     }
 
-    const token = jwt.sign({ _id: user._id }, 'process.env.JWT', { expiresIn: '30d' });
+    let token;
+    if (user.role === 'owner' || user.role === 'admin') {
+      token = jwt.sign({ _id: user._id, role: user.role }, 'process.env.JWT', {
+        expiresIn: '30d',
+      });
+    } else {
+      token = jwt.sign({ _id: user._id }, 'process.env.JWT', {
+        expiresIn: '30d',
+      });
+    }
 
     const { passwordHash, ...userData } = user.toObject();
-
-    console.log(`Authorization: ${user}`, token);
 
     res.json({
       ...userData,
@@ -104,16 +110,18 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
  */
 export const createOrder = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { user, telegram, detailedDescription, price, category, service } = req.body;
+    const { telegram, detailedDescription, price, category, service } = req.body;
 
     // Проверка наличия необходимых полей
-    if (!user || !telegram || !detailedDescription || !price) {
+    if (!telegram || !detailedDescription || !price || !category || !service) {
       return next(new AppError('Все поля обязательны для заполнения', 400));
     }
 
+    const user = await User.findOne({ telegram }).exec();
+    console.log(user);
     // Проверка валидности идентификатора пользователя
     let userId;
-    if (mongoose.Types.ObjectId.isValid(user)) {
+    if (user && mongoose.Types.ObjectId.isValid((user as any)._id.toString())) {
       userId = user;
     } else {
       const foundUser = await User.findOne({ user });
@@ -129,12 +137,27 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
       return next(new AppError('Пользователь не верифицирован', 403));
     }
 
+    const findCategory = await Category.findOne({ category }).exec();
+
+    if (!findCategory) {
+      return next(new AppError('Категория не найдена', 404));
+    }
+
+    const serviceFind = findCategory.services.find(
+      (serviceItem: { name: string }) => serviceItem.name === service
+    );
+    if (!serviceFind) {
+      return next(new AppError('Услуга не найдена', 404));
+    }
+
     // Создание нового заказа
     const order = new Order({
       user: userId,
       telegram,
       detailedDescription,
       price,
+      category: findCategory._id,
+      service: serviceFind.name,
     });
 
     // Сохранение заказа
@@ -171,7 +194,10 @@ export const getPersonalOrder = async (req: Request, res: Response, next: NextFu
         return next(new AppError('Пользователь не найден', 404));
       }
 
-      const orders = await Order.find({ user: user._id }).populate('user', 'username').lean();
+      const orders = await Order.find({ user: user._id })
+        .populate('user', 'username')
+        .populate('category', 'category') // Пополнение категории для получения её имени
+        .lean();
 
       const ordersWithUsername = await Promise.all(
         orders.map(async (order) => {
@@ -182,6 +208,7 @@ export const getPersonalOrder = async (req: Request, res: Response, next: NextFu
             ...order,
             user: (order.user as any).username, // Заменяем ObjectId пользователя на никнейм
             admin: adminData ? adminData.user : order.admin, // Заменяем ObjectId админа на никнейм или оставляем ObjectId, если данные админа не найдены
+            category: (order.category as any).category, // Заменяем ObjectId категории на её имя
           };
         })
       );
@@ -200,11 +227,14 @@ export const getPersonalOrder = async (req: Request, res: Response, next: NextFu
  * @method GET
  * @param {string} orderId - ID заказа
  */
-export const orderNotification = async (req: Request, res: Response, next: NextFunction) => {
+export const orderInNotification = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { orderId } = req.params;
 
-    const order = await Order.findById(orderId);
+    const order = await Order.findById(orderId)
+      .populate('user', 'user')
+      .populate('category', 'category')
+      .lean();
 
     if (!order) {
       return next(new AppError('Order not found', 404));
@@ -216,9 +246,13 @@ export const orderNotification = async (req: Request, res: Response, next: NextF
       return next(new AppError('User not found', 404));
     }
 
+    const adminData = await User.findById(order.admin).lean();
+
     const orderWithUser = {
-      ...order.toObject(),
+      ...order,
       user: user.user,
+      admin: adminData ? adminData.user : order.admin,
+      category: (order.category as any).category,
     };
 
     res.status(200).json(orderWithUser);
@@ -301,6 +335,47 @@ export const updateOrder = async (req: Request, res: Response, next: NextFunctio
     }
 
     res.status(200).json({ updatedOrder });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const notificationOrders = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const token = req.headers.authorization?.replace(/Bearer\s?/, '');
+
+    if (!token) {
+      return next(new AppError('Пожалуйста, авторизуйтесь', 401));
+    }
+
+    const decoded = jwt.verify(token, 'process.env.JWT' as string) as { _id: string };
+
+    const user = await User.findById(decoded._id).exec();
+
+    if (!user) {
+      return next(new AppError('Пользователь не найден', 404));
+    }
+
+    const orders = await Order.find({
+      status: { $in: ['Ожидает оплаты', 'Готов к передаче'] },
+    }).exec();
+
+    if (!orders) {
+      return next(new AppError('Заказы не найдены', 404));
+    }
+
+    if (orders.length === 0) {
+      res.status(404).json({ message: 'Уведомлений нет' });
+    }
+
+    res.json(
+      orders.map((order) => ({
+        _id: order._id,
+        status: order.status,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      }))
+    );
   } catch (err) {
     next(err);
   }
@@ -448,6 +523,44 @@ export const showCategory = async (req: Request, res: Response, next: NextFuncti
   try {
     const categories = await Category.find().exec();
     res.status(200).json(categories);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getLastOrders = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const token = req.headers.authorization?.replace(/Bearer\s?/, '');
+
+    if (!token) {
+      return next(new AppError('Пожалуйста, авторизуйтесь', 401));
+    }
+
+    const decoded = jwt.verify(token, 'process.env.JWT' as string) as { _id: string };
+
+    const user = await User.findById(decoded._id).exec();
+
+    if (!user) {
+      return next(new AppError('Пользователь не найден', 404));
+    }
+
+    const orders = await Order.find({ user: user._id }).sort({ createdAt: -1 }).limit(2).exec();
+
+    if (!orders) {
+      return next(new AppError('Заказы не найдены', 404));
+    }
+
+    res.json(
+      orders.map((order) => ({
+        _id: order._id,
+        detailedDescription: order.detailedDescription,
+        telegram: order.telegram,
+        status: order.status,
+        price: order.price,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+      }))
+    );
   } catch (err) {
     next(err);
   }

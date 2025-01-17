@@ -13,13 +13,11 @@ dotenv.config();
  */
 export const getUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const authHeader = req.headers.authorization;
+    const token = (req.headers.authorization || '').replace(/Bearer\s?/, '');
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!token) {
       return next(new AppError('Токен не предоставлен или имеет неправильный формат', 401));
     }
-
-    const token = authHeader.replace('Bearer ', '');
 
     const decodedToken = jwt.verify(token, 'process.env.JWT' as string) as {
       _id: string;
@@ -42,14 +40,6 @@ export const getUser = async (req: Request, res: Response, next: NextFunction) =
       });
     }
   } catch (err) {
-    if (err instanceof Error) {
-      if (err.name === 'JsonWebTokenError') {
-        return next(new AppError('Неверный токен. Пожалуйста, войдите снова!', 401));
-      }
-      if (err.name === 'TokenExpiredError') {
-        return next(new AppError('Срок действия токена истек. Пожалуйста, войдите снова!', 401));
-      }
-    }
     next(err);
   }
 };
