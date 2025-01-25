@@ -10,12 +10,13 @@ router.post('/register', registerPipeline, userController.register);
 router.post('/login/login', loginPipeline, userController.login);
 
 //?--------------------ORDERS---------------------?\\
+//TODO улучшить роуты
 router.post('/orders/create', authMiddleware, createOrderPipeline, userController.createOrder);
-router.get('/orders/get', authMiddleware, userController.getPersonalOrder);
+router.get('/orders/get', authMiddleware, userController.getPersonalOrder); // TODO убрать get
 router.get('/order/:orderId', authMiddleware, userController.orderInNotification);
 router.post('/order/cancel/:orderId', authMiddleware, userController.cancelOrder);
 router.put('/order/update/:orderId', authMiddleware, userController.updateOrder);
-router.get('/category/get', authMiddleware, userController.showCategory);
+router.get('/category/get', authMiddleware, userController.showCategory); // TODO убрать get
 router.get('/notification/orders', authMiddleware, userController.notificationOrders);
 router.get('/orders/get/lastorders', authMiddleware, userController.getLastOrders);
 

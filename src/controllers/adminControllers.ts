@@ -1,55 +1,20 @@
 import { Request, Response, NextFunction } from 'express';
-import User from '../models/user.model';
 import jwt from 'jsonwebtoken';
-import Order from '../models/order.model';
-import bcrpyt from 'bcrypt';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { AppError } from '../utils/AppError';
-import { Category } from '../models/category.model';
+import User from '../models/user.model';
+import Order from '../models/order.model';
+import Category from '../models/category.model';
 
 dotenv.config();
 
 /**
- * Авторизация админа
- * @method POST
- * @param {string} telegram - Телеграм
- * @param {string} password - Пароль
- */
-export const login = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const user = await User.findOne({ telegram: req.body.telegram });
-
-    if (!user) {
-      return next(new AppError('Пользователь не найден', 404));
-    }
-
-    const isValidPass = await bcrpyt.compare(req.body.password, user.passwordHash);
-
-    if (!isValidPass) {
-      return next(new AppError('Логин или пароль неверный', 401));
-    }
-
-    if (!user.role || (user.role !== 'admin' && user.role !== 'owner')) {
-      return next(new AppError('Доступ запрещен: Только для администраторов', 403));
-    }
-
-    const token = jwt.sign({ id: user._id, role: user.role }, 'process.env.JWT', {
-      expiresIn: '10d',
-    });
-
-    const { passwordHash, ...userData } = user.toObject();
-
-    res.json({ token, ...userData });
-  } catch {
-    next();
-  }
-};
-
-/**
  * Проверка роли пользователя
- * @method POST
- * @param {string} token - JWT токен
+ * @method post
+ * @param req
+ * @param res
+ * @param next
  */
 export const checkRole = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.replace(/Bearer\s?/, '');
@@ -64,9 +29,9 @@ export const checkRole = async (req: Request, res: Response, next: NextFunction)
 
     if (role === 'admin' || role === 'owner') {
       res.json({ role });
+    } else {
+      res.sendStatus(204); // TODO: check this
     }
-
-    res.sendStatus(204); // TODO: check this
   } catch {
     next(new AppError('Внутрення ошибка сервера', 500));
   }
@@ -107,7 +72,7 @@ export const showAllOrders = async (req: Request, res: Response, next: NextFunct
  * @param {string} authorization - Bearer токен
  */
 export const takeOrder = async (req: Request, res: Response, next: NextFunction) => {
-  const { orderId } = req.body;
+  const { orderId } = req.params;
   const token = req.headers.authorization?.replace(/Bearer\s?/, '');
 
   if (!token) {
@@ -276,6 +241,36 @@ export const addCategory = async (req: Request, res: Response, next: NextFunctio
       status: 'success',
       data: newCategory,
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getAllOrders = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const orders = await Order.find()
+      .populate('user', 'username')
+      .populate('category', 'category') // Пополнение категории для получения её имени
+      .lean();
+
+    const ordersWithUsername = await Promise.all(
+      orders.map(async (order) => {
+        // Находим данные админа по ObjectId из заказа
+        const adminData = await User.findById(order.admin).lean();
+
+        const discountPrice = order.price * 0.85; // 15% discount
+
+        return {
+          ...order,
+          user: (order.user as any).username, // Заменяем ObjectId пользователя на никнейм
+          admin: adminData ? adminData.user : order.admin, // Заменяем ObjectId админа на никнейм или оставляем ObjectId, если данные админа не найдены
+          category: (order.category as any).category, // Заменяем ObjectId категории на её имя
+          price: discountPrice,
+        };
+      })
+    );
+
+    res.status(200).json(ordersWithUsername);
   } catch (err) {
     next(err);
   }

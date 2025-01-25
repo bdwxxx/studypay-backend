@@ -8,7 +8,11 @@ interface AuthenticatedRequest extends Request {
   userId?: string;
 }
 
-const verifyRoleOwner = (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+export const ownerMiddleware = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
   const token = (req.headers.authorization || '').replace(/Bearer\s?/, '');
 
   if (token) {
@@ -33,5 +37,3 @@ const verifyRoleOwner = (req: AuthenticatedRequest, res: Response, next: NextFun
     res.status(403).json({ message: 'FORBIEEDEN' });
   }
 };
-
-export default verifyRoleOwner;

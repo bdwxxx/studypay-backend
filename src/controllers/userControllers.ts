@@ -1,15 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
-import User from '../models/user.model';
 import jwt from 'jsonwebtoken';
-import Order from '../models/order.model';
 import bcrpyt from 'bcrypt';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { AppError } from '../utils/AppError';
-import ConfirmationCodeModel from '../models/confimation-code.model';
-import TelegramModel from '../models/telegram.model';
 import { bot } from '../server';
-import { Category } from '../models/category.model';
+import User from '../models/user.model';
+import TelegramModel from '../models/telegram.model';
+import Order from '../models/order.model';
+import ConfirmationCodeModel from '../models/confimation-code.model';
+import Category from '../models/category.model';
 
 dotenv.config();
 
@@ -33,6 +33,11 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     const salt = await bcrpyt.genSalt(10);
     const hashedPassword = await bcrpyt.hash(password, salt);
 
+    const expiresInTime = process.env.JWT_EXPIRES_IN;
+    if (!expiresInTime) {
+      console.log('JWT_EXPIRES_IN is not defined');
+    }
+
     const doc = new User({
       user,
       telegram,
@@ -41,8 +46,11 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
 
     const newUser = await doc.save();
 
-    const token = jwt.sign({ id: newUser._id }, 'process.env.JWT' as string, { expiresIn: '30d' });
+    const token = jwt.sign({ id: newUser._id }, 'process.env.JWT' as string, {
+      expiresIn: expiresInTime,
+    });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...userData } = newUser.toObject();
 
     res.status(200).json({
@@ -52,7 +60,6 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
         token,
       },
     });
-    res.status(200).json({ message: 'Код подтверждения отправлен' });
   } catch (err) {
     next(err);
   }
@@ -78,18 +85,31 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       return next(new AppError('Логин или пароль неверный', 400));
     }
 
+    const expiresInTime = process.env.JWT_EXPIRES_IN;
+    if (!expiresInTime) {
+      console.log('JWT_EXPIRES_IN is not defined');
+    }
+
     let token;
     if (user.role === 'owner' || user.role === 'admin') {
       token = jwt.sign({ _id: user._id, role: user.role }, 'process.env.JWT', {
-        expiresIn: '30d',
+        expiresIn: expiresInTime,
       });
     } else {
       token = jwt.sign({ _id: user._id }, 'process.env.JWT', {
-        expiresIn: '30d',
+        expiresIn: expiresInTime,
       });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { passwordHash, ...userData } = user.toObject();
+
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      sameSite: 'lax',
+    });
 
     res.json({
       ...userData,

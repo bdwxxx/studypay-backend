@@ -15,6 +15,7 @@ const corsOptions = {
     'https://studypay-one.vercel.app',
   ],
   methods: ['GET', 'POST', 'PUT'],
+  credentials: true,
 };
 
 //?------------------MIDDLEWARES------------------?\\

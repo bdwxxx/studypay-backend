@@ -44,4 +44,6 @@ const CategorySchema: Schema = new Schema({
   services: [ServiceSchema],
 });
 
-export const Category = mongoose.model<ICategory>('Category', CategorySchema);
+const Category = mongoose.model<ICategory>('Category', CategorySchema);
+
+export default Category;
