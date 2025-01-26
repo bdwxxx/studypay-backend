@@ -1,41 +1,39 @@
-import jwt from "jsonwebtoken";
-import { Request, Response, NextFunction } from "express";
+import jwt from 'jsonwebtoken';
+import { Request, Response, NextFunction } from 'express';
 
-import dotenv from "dotenv";
+import dotenv from 'dotenv';
 dotenv.config();
 
 interface AuthenticatedRequest extends Request {
   userId?: string;
 }
 
-const verifyRoleOwner = (
+export const ownerMiddleware = (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
 ): void => {
-  const token = (req.headers.authorization || "").replace(/Bearer\s?/, "");
+  const token = (req.headers.authorization || '').replace(/Bearer\s?/, '');
 
   if (token) {
     try {
-      const decoded = jwt.verify(token, process.env.JWT as string) as {
+      const decoded = jwt.verify(token, 'process.env.JWT' as string) as {
         _id: string;
         role: string;
       };
-      console.log("Decoded token:", decoded);
+      console.log('Decoded token:', decoded);
       req.userId = decoded._id;
 
-      if (decoded.role === "owner") {
+      if (decoded.role === 'owner') {
         next();
       } else {
-        res.status(403).json({ message: "FORBIEEDEN" });
+        res.status(403).json({ message: 'FORBIEEDEN' });
       }
     } catch (e) {
-      console.error("Error verifying token:", e);
-      res.status(403).json({ message: "FORBIEEDEN" });
+      console.error('Error verifying token:', e);
+      res.status(403).json({ message: 'FORBIEEDEN' });
     }
   } else {
-    res.status(403).json({ message: "FORBIEEDEN" });
+    res.status(403).json({ message: 'FORBIEEDEN' });
   }
 };
-
-export default verifyRoleOwner;

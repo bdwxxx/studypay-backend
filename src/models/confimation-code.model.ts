@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema } from 'mongoose';
 
 interface IConfirmationCode extends Document {
   userId: mongoose.Schema.Types.ObjectId;
@@ -9,7 +9,7 @@ interface IConfirmationCode extends Document {
 const ConfirmationCodeSchema: Schema = new Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
+    ref: 'User',
     required: true,
   },
   code: {
@@ -19,12 +19,12 @@ const ConfirmationCodeSchema: Schema = new Schema({
   createdAt: {
     type: Date,
     default: Date.now,
-    expires: "5m",
+    expires: '5m',
   },
 });
 
 const ConfirmationCodeModel = mongoose.model<IConfirmationCode>(
-  "ConfirmationCode",
+  'ConfirmationCode',
   ConfirmationCodeSchema
 );
 

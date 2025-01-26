@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema, Model } from "mongoose";
+import mongoose, { Document, Schema, Model } from 'mongoose';
 
 interface ITelegram extends Document {
   chatId: number;
@@ -22,6 +22,6 @@ const TelegramSchema: Schema<ITelegram> = new Schema(
   { timestamps: true }
 );
 
-const TelegramModel: Model<ITelegram> = mongoose.model<ITelegram>("Telegram", TelegramSchema);
+const TelegramModel: Model<ITelegram> = mongoose.model<ITelegram>('Telegram', TelegramSchema);
 
 export default TelegramModel;
