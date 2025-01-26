@@ -10,6 +10,7 @@ import TelegramModel from '../models/telegram.model';
 import Order from '../models/order.model';
 import ConfirmationCodeModel from '../models/confimation-code.model';
 import Category from '../models/category.model';
+import { AuthenticatedRequest } from '../middleware/auth.middleware';
 
 dotenv.config();
 
@@ -199,46 +200,40 @@ export const createOrder = async (req: Request, res: Response, next: NextFunctio
  * @method GET
  * @param {string} authorization - Bearer токен в заголовке
  */
-export const getPersonalOrder = async (req: Request, res: Response, next: NextFunction) => {
-  const token = (req.headers.authorization || '').replace(/Bearer\s?/, '');
+export const getPersonalOrder = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const user = await User.findById(req.userId);
 
-  if (token) {
-    try {
-      const decoded = jwt.verify(token, 'process.env.JWT' as string) as {
-        _id: string;
-      };
-
-      const user = await User.findById(decoded._id);
-
-      if (!user) {
-        return next(new AppError('Пользователь не найден', 404));
-      }
-
-      const orders = await Order.find({ user: user._id })
-        .populate('user', 'username')
-        .populate('category', 'category') // Пополнение категории для получения её имени
-        .lean();
-
-      const ordersWithUsername = await Promise.all(
-        orders.map(async (order) => {
-          // Находим данные админа по ObjectId из заказа
-          const adminData = await User.findById(order.admin).lean();
-
-          return {
-            ...order,
-            user: (order.user as any).username, // Заменяем ObjectId пользователя на никнейм
-            admin: adminData ? adminData.user : order.admin, // Заменяем ObjectId админа на никнейм или оставляем ObjectId, если данные админа не найдены
-            category: (order.category as any).category, // Заменяем ObjectId категории на её имя
-          };
-        })
-      );
-
-      res.status(200).json(ordersWithUsername);
-    } catch (err) {
-      next(err);
+    if (!user) {
+      return next(new AppError('Пользователь не найден', 404));
     }
-  } else {
-    next(new AppError('No token provided', 401));
+
+    const orders = await Order.find({ user: user._id })
+      .populate('user', 'username')
+      .populate('category', 'category') // Пополнение категории для получения её имени
+      .lean();
+
+    const ordersWithUsername = await Promise.all(
+      orders.map(async (order) => {
+        // Находим данные админа по ObjectId из заказа
+        const adminData = await User.findById(order.admin).lean();
+
+        return {
+          ...order,
+          user: (order.user as any).username, // Заменяем ObjectId пользователя на никнейм
+          admin: adminData ? adminData.user : order.admin, // Заменяем ObjectId админа на никнейм или оставляем ObjectId, если данные админа не найдены
+          category: (order.category as any).category, // Заменяем ObjectId категории на её имя
+        };
+      })
+    );
+
+    res.status(200).json(ordersWithUsername);
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -287,8 +282,7 @@ export const orderInNotification = async (req: Request, res: Response, next: Nex
  * @param {string} orderId - ID заказа
  * @param {string} authorization - Bearer токен
  */
-export const cancelOrder = async (req: Request, res: Response, next: NextFunction) => {
-  const token = (req.headers.authorization || '').replace(/Bearer\s?/, '');
+export const cancelOrder = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     const order = await Order.findById(req.params.orderId);
 
@@ -296,9 +290,7 @@ export const cancelOrder = async (req: Request, res: Response, next: NextFunctio
       return next(new AppError('Заказ не найден', 404));
     }
 
-    const decoded = jwt.verify(token, 'process.env.JWT') as { _id: string };
-
-    if (order.user.toString() !== decoded._id) {
+    if (order.user.toString() !== req.userId) {
       return next(new AppError('Вы не можете отменить чужой заказ', 403));
     }
 
@@ -360,17 +352,13 @@ export const updateOrder = async (req: Request, res: Response, next: NextFunctio
   }
 };
 
-export const notificationOrders = async (req: Request, res: Response, next: NextFunction) => {
+export const notificationOrders = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const token = req.headers.authorization?.replace(/Bearer\s?/, '');
-
-    if (!token) {
-      return next(new AppError('Пожалуйста, авторизуйтесь', 401));
-    }
-
-    const decoded = jwt.verify(token, 'process.env.JWT' as string) as { _id: string };
-
-    const user = await User.findById(decoded._id).exec();
+    const user = await User.findById(req.userId).exec();
 
     if (!user) {
       return next(new AppError('Пользователь не найден', 404));
@@ -406,17 +394,13 @@ export const notificationOrders = async (req: Request, res: Response, next: Next
  * @method POST
  * @param {string} headers.authorization - Bearer токен
  */
-export const verifiedUserInBot = async (req: Request, res: Response, next: NextFunction) => {
+export const verifiedUserInBot = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const token = req.headers.authorization?.replace(/Bearer\s?/, '');
-
-    if (!token) {
-      return next(new AppError('Пожалуйста, авторизуйтесь', 401));
-    }
-
-    const decoded = jwt.verify(token, 'process.env.JWT' as string) as { _id: string };
-
-    const user = await User.findById(decoded._id, 'telegram').exec();
+    const user = await User.findById(req.userId, 'telegram').exec();
 
     const telegramUser = await TelegramModel.findOne({ telegram: user?.telegram }).exec();
 
@@ -438,17 +422,13 @@ export const verifiedUserInBot = async (req: Request, res: Response, next: NextF
  * @param {string} authorization - Bearer токен в заголовке
  * @returns {string} code - Сообщение о верификации
  */
-export const sendVerificationCode = async (req: Request, res: Response, next: NextFunction) => {
+export const sendVerificationCode = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const token = req.headers.authorization?.replace(/Bearer\s?/, '');
-
-    if (!token) {
-      return next(new AppError('Пожалуйста, авторизуйтесь', 401));
-    }
-
-    const decoded = jwt.verify(token, 'process.env.JWT' as string) as { _id: string };
-
-    const user = await User.findById(decoded._id, 'isVerified').exec();
+    const user = await User.findById(req.userId, 'isVerified').exec();
 
     if (!user) {
       return next(new AppError('Пользователь не найден', 404));
@@ -464,12 +444,12 @@ export const sendVerificationCode = async (req: Request, res: Response, next: Ne
       .join('');
     const confirmationCode = new ConfirmationCodeModel({
       code: generateCode,
-      userId: decoded._id,
+      userId: req.userId,
     });
 
     await confirmationCode.save();
 
-    const telegramInUser = await User.findById(decoded._id, 'telegram').exec();
+    const telegramInUser = await User.findById(req.userId, 'telegram').exec();
 
     const telegramUser = await TelegramModel.findOne({ telegram: telegramInUser?.telegram }).exec();
 
@@ -478,7 +458,7 @@ export const sendVerificationCode = async (req: Request, res: Response, next: Ne
       await bot.sendMessage(
         chatId,
         `*🔒 Код подтверждения*\n\n` +
-          `Ваш код подтверждения: \`${generateCode}\`\n\n` +
+          `Для подтверждения вашего аккаунта, введите этот код: \`${generateCode}\`\n\n` +
           `Код действует *5 минут*\\.\n\n` +
           `_Если вы не запрашивали этот код, просто проигнорируйте это сообщение\\._`,
         {
@@ -495,28 +475,25 @@ export const sendVerificationCode = async (req: Request, res: Response, next: Ne
   }
 };
 
-export const checkVerificationCode = async (req: Request, res: Response, next: NextFunction) => {
+export const checkVerificationCode = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const token = req.headers.authorization?.replace(/Bearer\s?/, '');
     const { code } = req.body;
-
-    if (!token) {
-      return next(new AppError('Пожалуйста, авторизуйтесь', 401));
-    }
 
     if (!code) {
       return next(new AppError('Код не предоставлен', 400));
     }
 
-    const decoded = jwt.verify(token, 'process.env.JWT' as string) as { _id: string };
-
-    const user = await User.findById(decoded._id).exec();
+    const user = await User.findById(req.userId).exec();
 
     if (!user) {
       return next(new AppError('Пользователь не найден', 404));
     }
 
-    const confirmationCode = await ConfirmationCodeModel.findOne({ userId: decoded._id }).exec();
+    const confirmationCode = await ConfirmationCodeModel.findOne({ userId: req.userId }).exec();
 
     console.log(confirmationCode);
 
@@ -533,7 +510,10 @@ export const checkVerificationCode = async (req: Request, res: Response, next: N
     await user.save();
     await ConfirmationCodeModel.deleteOne({ _id: confirmationCode._id }).exec();
 
-    res.json({ message: 'Пользователь успешно верифицирован' });
+    res.status(200).json({
+      status: 'succces',
+      message: 'Пользователь верифицирован',
+    });
   } catch (err) {
     next(err);
   }
@@ -548,17 +528,13 @@ export const showCategory = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
-export const getLastOrders = async (req: Request, res: Response, next: NextFunction) => {
+export const getLastOrders = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    const token = req.headers.authorization?.replace(/Bearer\s?/, '');
-
-    if (!token) {
-      return next(new AppError('Пожалуйста, авторизуйтесь', 401));
-    }
-
-    const decoded = jwt.verify(token, 'process.env.JWT' as string) as { _id: string };
-
-    const user = await User.findById(decoded._id).exec();
+    const user = await User.findById(req.userId).exec();
 
     if (!user) {
       return next(new AppError('Пользователь не найден', 404));
